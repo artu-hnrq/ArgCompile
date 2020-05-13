@@ -1,0 +1,10 @@
+README.md
+setup.py
+argcompile/__init__.py
+argcompile/argcompile.py
+argcompile/filepicker.py
+argcompile/meta.py
+argcompile.egg-info/PKG-INFO
+argcompile.egg-info/SOURCES.txt
+argcompile.egg-info/dependency_links.txt
+argcompile.egg-info/top_level.txt
