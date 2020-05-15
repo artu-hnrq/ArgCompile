@@ -1,17 +1,5 @@
-import argparse
-from argparse import *
-from argparse import _AppendConstAction, _AppendAction, _StoreAction, _ArgumentGroup
-from meta import MetaComposition
+from argparse import SUPPRESS, _ActionsContainer, _AppendAction, _AppendConstAction, _ArgumentGroup
 import sys
-
-# --------------------------------------------
-
-__version__ = '0.0.1'
-__all__ = argparse.__all__ + [
-    'Attribute',
-	'Target',
-	'ArgumentCompiler'
-]
 
 # ==============
 # Action classes
@@ -59,23 +47,60 @@ class _RequiredGroup(_ArgumentGroup):
 			if self._option_strings:
 				parser.error(f"one of the arguments {' '.join(self._option_strings)} is required")
 
+class _DependentGroup(_ArgumentGroup):
+	def __init__(self, container, dependence, **kwargs):
+		super(_DependentGroup, self).__init__(container, **kwargs)
+		self.register('usage_test', str(id(self)), self.test)
+
+		self.dependence = dependence
+
+	@property
+	def _option_strings(self):
+		option_strings = []
+		for action in self._group_actions:
+			option_strings += action.option_strings
+		return option_strings
+
+	def test(self, parser, args, namespace):
+		for option in self._option_strings:
+			if option in args:
+				for group in self.dependence:
+					if not any(arg in args for arg in group):
+						parser.error(
+							f"argument {option} " \
+							f"require one of the arguments {' '.join(group)}"
+						)
+
 # ===========================
-# Optional and Positional Parsing
+# Attribute parsing classes
 # ===========================
 
-class Attribute(_ArgumentGroup):
+class Attribute(_ActionsContainer):
 	def __init__(self,
 				 *option_strings,
-				 dest=None,
-				 nargs=None,
-				 const=None,
-				 default=SUPPRESS,
-				 type=None,
-				 choices=None,
-				 help=None,
-				 metavar=None,
+				 dest = None,
+				 nargs = None,
+				 const = None,
+				 default = SUPPRESS,
+				 type = None,
+				 choices = None,
+				 help = None,
+				 metavar = None,
+
+				 title = None,
+				 description = None,
 				 **kwargs):
-		super(Attribute, self).__init__(**kwargs)
+		super(Attribute, self).__init__(
+			description = description,
+            prefix_chars = '-',
+            argument_default = SUPPRESS,
+            conflict_handler = 'error'
+		)
+
+		self.register('action', 'append_over', _AppendOverDefault)
+		self.register('action', 'append_const_over', _AppendConstOverDefault)
+		self.register('type', None, lambda str: str)
+		self.title = title
 
 		self.option_strings = option_strings
 		self.dest = dest
@@ -87,8 +112,8 @@ class Attribute(_ArgumentGroup):
 		self.help = help
 		self.metavar = metavar
 
-	# def optional(self):
-	# 	if self.option_strings and self.option_strings[0] in self.prefix_chars:
+	def __call__(self, namespace):
+		return namespace
 
 	@property
 	def arguments(self):
@@ -102,10 +127,16 @@ class Attribute(_ArgumentGroup):
 			   if self.required else \
 			   self.add_argument_group(**kwargs)
 
-	def add_required_group(self, *args, **kwargs):
-		group = _RequiredGroup(self, *args, **kwargs)
+	def _add_group(self, group_class, *args, **kwargs):
+		group = group_class(*args, **kwargs)
 		self._action_groups.append(group)
 		return group
+
+	def add_required_group(self, *args, **kwargs):
+		return self._add_group(_RequiredGroup, *args, **kwargs)
+
+	def add_dependent_group(self, *args, **kwargs):
+		return self._add_group(_DependentGroup, *args, **kwargs)
 
 	@property
 	def required(self):
@@ -135,26 +166,26 @@ class Attribute(_ArgumentGroup):
 			'+': 1,
 		}.get(self.nargs, self.nargs)
 
+
 class Target(Attribute):
 	def __init__(self,
-				 container,
 				 dest,
 				 nargs = '+',
-                 const = ['.*'],
-                 default = ['.*'],
-				 help = "Defines chosen targets",
+				 default = ['.*'],
+				 type = None,
+				 help = "define chosen targets",
 
-				 title = None,
+                 title = "Target",
 				 description = "Function's main target object"):
 		super(Target, self).__init__(
 			dest = dest,
 			nargs = nargs,
-			const = const,
 			default = default,
+			type = type,
+			help = help,
 
-			container = container,
 			title = title or dest,
-			description = description,
+			description = description
 		)
 
 		target = self.add_mutually_exclusive_group(required=self.required) \
@@ -163,47 +194,34 @@ class Target(Attribute):
 
 		if not self.limited:
 			target.add_argument('--all',
-				action = 'store_const',
-				dest = self.dest,
-				const = self.const,
-				help = 'Get all targets'
+				action = 'store_true',
+				help = 'get all targets'
 			)
-		target.add_argument(self.dest,
+		target.add_argument('target',
 			nargs = {
 				'+': '*'
 			}.get(self.nargs, self.nargs),
 			default = self.default,
 			type = self.type,
-			choices = self.choices,
-			metavar = self.metavar,
-			help = self.help
+			help = self.help,
+			metavar = self.dest
 		)
 
-class MetaArgumentCompiler(MetaComposition):
-	def __run__(self, namespace):
-		for compiler in self.__class__.__compound__:
-			namespace = compiler.__run__(self, namespace)
-		return namespace
+	def popattr(self, namespace):
+		attributes = dict([
+			(action.dest, getattr(namespace, action.dest, None))
+			for action in
+			self._actions
+		])
+		for attr, value in attributes.items():
+			if value:
+				delattr(namespace, attr)
 
-class ArgumentCompiler(ArgumentParser, metaclass=MetaArgumentCompiler):
-	def __init__(self, **kwargs):
-		super(ArgumentCompiler, self).__init__(**kwargs)
-
-		self.register('action', 'append_over', _AppendOverDefault)
-		self.register('action', 'append_const_over', _AppendConstOverDefault)
-
-		self.register('compilation', str(id(self)), self.__call__)
-
-	def parse_args(self, args=None, namespace=None):
-		namespace  = super(ArgumentCompiler, self).parse_args(args, namespace)
-
-		for test in self._registries.get('usage_test', {}).values():
-			test(self, args or sys.argv[1:], namespace)
-
-		for compilation in self._registries.get('compilation', {}).values():
-			namespace = compilation(namespace)
-
-		return namespace
+		return attributes
 
 	def __call__(self, namespace):
+		def process(*, all = None, target = None):
+			setattr(namespace, self.dest, ['.*'] if all else target)
+
+		process(**self.popattr(namespace))
 		return namespace

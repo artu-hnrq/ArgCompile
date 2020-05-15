@@ -1,5 +1,7 @@
-from argcompile import *
+from argparse import *
 from argparse import _StoreAction
+from .compiler import ArgumentCompiler
+from .attribute import *
 
 import yaml
 import os
@@ -37,81 +39,6 @@ class Path(_StoreAction):
 		if not str.endswith('/'):
 			str += '/'
 		return str
-
-class Extension(Attribute):
-	def __init__(self,
-				 container,
-				 *option_strings,
-				 dest = 'extension',
-				 nargs = '*',
-				 default = None,
-				 type = None,
-				 choices = None,
-				 help = 'define target extension(s)',
-				 metavar = 'EXT',
-
-				 title = 'Extension',
-				 description = 'option(s) to define extension(s)',
-				 argument_default = SUPPRESS,
-				 **kwargs):
-		super(Extension, self).__init__(
-			*(option_strings or ['-e', '--extention']),
-			dest = dest,
-			nargs = nargs,
-			default = default,
-			type = type,
-			choices = choices,
-			metavar = metavar,
-
-			container = container,
-			title = title,
-			description = description,
-			argument_default=argument_default,
-			**kwargs
-		)
-
-		if self.restricted:
-			if self.required:
-				if len(self.choices) < self.min:
-					raise ValueError(
-						"Number of restricted choices need to be equal or greater than minimum extensions required. \n" \
-						f"Restricted choices: {self.choices}, Minimum extensions required: {self.min}"
-					)
-				elif len(self.choices) == self.min:
-					self.default = self.choices
-					self.set_defaults(**{f"{self.dest}": self.choices})
-					return
-
-			elif len(self.choices) == 1:
-				self.add_options(*self.choices, action='store_const')
-				return
-
-		self.set_defaults(**{f"{self.dest}": self.default})
-
-		self.arguments.add_argument(*self.option_strings,
-			action = 'append_over',
-			dest = self.dest,
-			nargs = {
-				'?': 1,
-				'*': '+'
-			}.get(self.nargs, self.nargs),
-			choices = self.choices if self.restricted else None,
-			metavar = self.metavar,
-			help = self.help
-		)
-
-		if self.choices:
-			self.add_options(*self.choices, default=SUPPRESS)
-
-
-	def add_options(self, *options, action='append_const_over', **kwargs):
-		for option in options:
-			self.arguments.add_argument(f"--{option}",
-				action = action,
-				dest = self.dest,
-				const=f"{option}",
-				**kwargs
-			)
 
 class Output(_StoreAction):
 	def __init__(self,
@@ -156,7 +83,7 @@ class FilePicker(ArgumentCompiler):
 			filename = self.update(filename, {
 				'*': ['filename']
 			})
-			self.add_argument_group(Target(self, *filename.pop('*', []), **filename))
+			self.add_attribute(Target('filename')) #*filename.pop('*', []), **filename))
 
 		if isinstance(extension, dict):
 			extension = self.update(extension, {
@@ -164,7 +91,7 @@ class FilePicker(ArgumentCompiler):
 				'default': ['.*'],
 				'help': 'restrict files extension(s)'
 			})
-			self.add_argument_group(self, *extension.pop('*', []), action=Extension, **extension)
+			self.add_attribute(Extension(*extension.pop('*', []), **extension))
 
 	def update(self, reference, default):
 		default.update(reference)
@@ -181,7 +108,6 @@ class FilePicker(ArgumentCompiler):
 		if isinstance(namespace.path, str):
 			namespace.path = [namespace.path]
 
-		print(namespace)
 		for path in namespace.path:
 			try:
 				namespace.file = [
@@ -251,4 +177,78 @@ class YmlComputer(FileComputer):
 			namespace.file
 		]
 
+		return namespace
+
+class Extension(Attribute):
+	def __init__(self,
+				 *option_strings,
+				 dest = 'extension',
+				 nargs = '*',
+				 default = None,
+				 type = None,
+				 choices = None,
+				 help = 'define target extension(s)',
+				 metavar = 'extension',
+
+				 title = 'Extension',
+				 description = 'option(s) to define extension(s)'):
+		super(Extension, self).__init__(
+			option_strings = option_strings,
+			dest = dest,
+			nargs = nargs,
+			default = default,
+			type = type,
+			choices = choices,
+			help = help,
+			metavar = metavar,
+
+			title = title or dest,
+			description = description
+		)
+
+		if self.restricted:
+			if self.required:
+				if len(self.choices) < self.min:
+					raise ValueError(
+						"Number of restricted choices need to be equal or greater than minimum extensions required. \n" \
+						f"Restricted choices: {self.choices}, Minimum extensions required: {self.min}"
+					)
+				elif len(self.choices) == self.min:
+					self.default = self.choices
+					self.set_defaults(**{f"{self.dest}": self.choices})
+					return
+
+			elif len(self.choices) == 1:
+				self.add_options(*self.choices, action='store_const')
+				return
+
+		self.set_defaults(**{f"{self.dest}": self.default})
+
+		self.arguments.add_argument(*self.option_strings,
+			action = 'append_over',
+			dest = self.dest,
+			nargs = {
+				'?': 1,
+				'*': '+'
+			}.get(self.nargs, self.nargs),
+			default = self.default,
+			choices = self.choices if self.restricted else None,
+			metavar = self.metavar,
+			help = self.help
+		)
+
+		if self.choices:
+			self.add_options(*self.choices, default=SUPPRESS)
+
+
+	def add_options(self, *options, action='append_const_over', **kwargs):
+		for option in options:
+			self.arguments.add_argument(f"--{option}",
+				action = action,
+				dest = self.dest,
+				const=f"{option}",
+				**kwargs
+			)
+
+	def __call__(self, namespace):
 		return namespace
