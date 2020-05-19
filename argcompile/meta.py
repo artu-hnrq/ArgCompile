@@ -1,6 +1,9 @@
-class MetaComposition(type):
-	def __new__(meta, name, bases, attr, __func__='__call__'):
+import inspect
 
+class MetaComposition(type):
+	"Overwrites a target method to call same-type superclasses' implementation orderly"
+
+	def __new__(meta, name, bases, attr, __func__='__call__'):
 		attr['__run__'] = attr[__func__]
 		attr[__func__] = meta.__run__
 
@@ -21,6 +24,78 @@ class MetaComposition(type):
 			if type(element)
 			is type(cls)
 		]
+
+class MetaArgumentCompiler(MetaComposition):
+	"Track __init__ keyword arguments to manage actions and attributes configuration"
+
+	def __new__(meta, name, bases, attr):
+		__config__ = attr.pop('__config__', {})
+		__action__ = attr.pop('__action__', {})
+		__attr__ = attr.pop('__attr__', {})
+
+		for keys in [__action__.keys(), __attr__.keys()]:
+			for key in keys:
+				if key not in __config__.keys():
+					__config__[key] = {}
+
+		__init__ = attr.pop('__init__', None)
+
+		def init(self, *a, **kw):
+			config = {}
+			for key, args in __config__.items():
+				if key in __action__.keys() or key in __attr__.keys():
+					config[key] = args
+					config[key].update(kw.pop(key, {}))
+				else:
+					kw[key] = args
+					kw[key].update(kw.get(key, {}))
+
+			if __init__:
+				__init__(self, *a, **kw)
+
+			for key, args in config.items():
+				if key in __action__:
+					self.add_argument(
+						*config[key].pop('*', []),
+						action = __action__[key],
+						**config[key]
+					)
+				else:
+					self.add_attribute(
+						__attr__[key](*config[key].pop('*', []), **config[key])
+					)
+
+		attr['__init__'] = init
+
+		return super(Meta, meta).__new__(meta, name, bases, attr)
+
+	def __run__(self, namespace):
+		for compiler in self.__class__.__compound__:
+			namespace = compiler.__run__(self, namespace)
+		return namespace
+
+
+class MetaAttribute(type):
+	"Overwrites __call__ method to pop temporary attributes from namespace in order to process them"
+
+	def __new__(meta, name, bases, attr):
+		__run__ = attr.get('__call__', None)
+		if __run__:
+			args = inspect.getargspec(__run__).args[1:]
+			def __call__(self, namespace):
+				attr = dict()
+				for arg in args:
+					value = getattr(namespace, arg, None)
+					if value:
+						attr[arg] = value
+						delattr(namespace, arg)
+
+				__run__(self, namespace, **attr)
+				return namespace
+
+			attr['__call__'] = __call__
+
+		return super(MetaAttribute, meta).__new__(meta, name, bases, attr)
 
 # class Meta(type):
 	# def __new__(meta, name, bases, attr):

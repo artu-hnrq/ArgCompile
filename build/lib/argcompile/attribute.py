@@ -1,4 +1,6 @@
-from argparse import SUPPRESS, _ActionsContainer, _AppendAction, _AppendConstAction, _ArgumentGroup
+import argparse
+from argparse import SUPPRESS, _AppendAction, _AppendConstAction
+from .meta import MetaAttribute
 import sys
 
 # ==============
@@ -22,14 +24,57 @@ class _AppendConstOverDefault(_AppendConstAction):
 		else:
 			super(self.__class__, self).__call__(parser, namespace, values, option_string)
 
+# ===========================
+# Argument parsing classes
+# ===========================
+
+class _ActionsContainer(argparse._ActionsContainer):
+	def __init__(self,
+				 title=None,
+				 description=None,
+				 prefix_chars='-',
+				 argument_default=SUPPRESS,
+				 conflict_handler='error'):
+		super(_ActionsContainer, self).__init__(
+			description = description,
+            prefix_chars = prefix_chars,
+            argument_default = argument_default,
+            conflict_handler = conflict_handler
+		)
+		self.title = title
+
+		self.register('action', 'append_over', _AppendOverDefault)
+		self.register('action', 'append_const_over', _AppendConstOverDefault)
+		self.register('type', None, lambda str: str)
+
+		self._testable_groups = []
+
+	def _add_group(self, group_class, *args, **kwargs):
+		group = group_class(*args, **kwargs)
+		self._testable_groups.append(group)
+		return group
+
+	def add_required_group(self, *args, **kwargs):
+		return self._add_group(_RequiredGroup, *args, **kwargs)
+
+	def add_dependent_group(self, *args, **kwargs):
+		return self._add_group(_DependentGroup, *args, **kwargs)
+
 # ==============
 # Group classes
 # ==============
 
-class _RequiredGroup(_ArgumentGroup):
-	def __init__(self, container, **kwargs):
-		super(_RequiredGroup, self).__init__(container, **kwargs)
-		self.register('usage_test', str(id(self)), self.test)
+class TestableGroup(_ActionsContainer):
+	"New-design group class to allow custom usage tests"
+
+	def __init__(self, **kwargs):
+		super(TestableGroup, self).__init__(**kwargs)
+		self.register('usage_test', str(id(self)), self.__call__)
+
+		self._group_actions = []
+
+	def __call__(self, parser, args, namespace):
+		pass
 
 	@property
 	def _option_strings(self):
@@ -38,7 +83,10 @@ class _RequiredGroup(_ArgumentGroup):
 			option_strings += action.option_strings
 		return option_strings
 
-	def test(self, parser, args, namespace):
+class _RequiredGroup(TestableGroup):
+	"Requires at least one argument present"
+
+	def __call__(self, parser, args, namespace):
 		for option in self._option_strings:
 			if option in args:
 				break
@@ -47,35 +95,33 @@ class _RequiredGroup(_ArgumentGroup):
 			if self._option_strings:
 				parser.error(f"one of the arguments {' '.join(self._option_strings)} is required")
 
-class _DependentGroup(_ArgumentGroup):
-	def __init__(self, container, dependence, **kwargs):
-		super(_DependentGroup, self).__init__(container, **kwargs)
-		self.register('usage_test', str(id(self)), self.test)
+class _DependentGroup(TestableGroup):
+	"Only allow argument if any of dependence is present"
 
+	def __init__(self, dependence, **kwargs):
+		super(_DependentGroup, self).__init__(**kwargs)
 		self.dependence = dependence
 
-	@property
-	def _option_strings(self):
-		option_strings = []
-		for action in self._group_actions:
-			option_strings += action.option_strings
-		return option_strings
-
-	def test(self, parser, args, namespace):
+	def __call__(self, parser, args, namespace):
 		for option in self._option_strings:
 			if option in args:
 				for group in self.dependence:
 					if not any(arg in args for arg in group):
 						parser.error(
-							f"argument {option} " \
-							f"require one of the arguments {' '.join(group)}"
+							f"argument {option} requires of one of the arguments {' '.join(group)}"
 						)
 
 # ===========================
-# Attribute parsing classes
+# Attribute compilation classes
 # ===========================
 
-class Attribute(_ActionsContainer):
+class Attribute(_ActionsContainer, metaclass=MetaAttribute):
+	"""ActionsContainer specialization to manage multiple input arguments in one Namespace attribute.
+
+	Attribute objects are used by an AttributeCompiler to represent information
+    needed to be parsed through multiple arguments from the command line. The keyword arguments
+	define its decentent Actions instances."""
+
 	def __init__(self,
 				 *option_strings,
 				 dest = None,
@@ -87,20 +133,10 @@ class Attribute(_ActionsContainer):
 				 help = None,
 				 metavar = None,
 
-				 title = None,
-				 description = None,
 				 **kwargs):
 		super(Attribute, self).__init__(
-			description = description,
-            prefix_chars = '-',
-            argument_default = SUPPRESS,
-            conflict_handler = 'error'
+			**kwargs
 		)
-
-		self.register('action', 'append_over', _AppendOverDefault)
-		self.register('action', 'append_const_over', _AppendConstOverDefault)
-		self.register('type', None, lambda str: str)
-		self.title = title
 
 		self.option_strings = option_strings
 		self.dest = dest
@@ -114,29 +150,6 @@ class Attribute(_ActionsContainer):
 
 	def __call__(self, namespace):
 		return namespace
-
-	@property
-	def arguments(self):
-		self._arguments = getattr(self, '_arguments', self.add_group())
-		return self._arguments
-
-	def add_group(self, **kwargs):
-		return self.add_mutually_exclusive_group(required=self.required) \
-		 	   if self.max == 1 else \
-			   self.add_required_group(**kwargs) \
-			   if self.required else \
-			   self.add_argument_group(**kwargs)
-
-	def _add_group(self, group_class, *args, **kwargs):
-		group = group_class(*args, **kwargs)
-		self._action_groups.append(group)
-		return group
-
-	def add_required_group(self, *args, **kwargs):
-		return self._add_group(_RequiredGroup, *args, **kwargs)
-
-	def add_dependent_group(self, *args, **kwargs):
-		return self._add_group(_DependentGroup, *args, **kwargs)
 
 	@property
 	def required(self):
@@ -166,14 +179,15 @@ class Attribute(_ActionsContainer):
 			'+': 1,
 		}.get(self.nargs, self.nargs)
 
-
 class Target(Attribute):
+	"Attribute designed to select compiler main object references"
+
 	def __init__(self,
 				 dest,
 				 nargs = '+',
 				 default = ['.*'],
 				 type = None,
-				 help = "define chosen targets",
+				 help = None,
 
                  title = "Target",
 				 description = "Function's main target object"):
@@ -182,7 +196,7 @@ class Target(Attribute):
 			nargs = nargs,
 			default = default,
 			type = type,
-			help = help,
+			help = help or f"define chosen {dest}s",
 
 			title = title or dest,
 			description = description
@@ -195,7 +209,7 @@ class Target(Attribute):
 		if not self.limited:
 			target.add_argument('--all',
 				action = 'store_true',
-				help = 'get all targets'
+				help = f"select all {self.dest}s"
 			)
 		target.add_argument('target',
 			nargs = {
@@ -207,21 +221,5 @@ class Target(Attribute):
 			metavar = self.dest
 		)
 
-	def popattr(self, namespace):
-		attributes = dict([
-			(action.dest, getattr(namespace, action.dest, None))
-			for action in
-			self._actions
-		])
-		for attr, value in attributes.items():
-			if value:
-				delattr(namespace, attr)
-
-		return attributes
-
-	def __call__(self, namespace):
-		def process(*, all = None, target = None):
-			setattr(namespace, self.dest, ['.*'] if all else target)
-
-		process(**self.popattr(namespace))
-		return namespace
+	def __call__(self, namespace, all=None, target=None):
+		setattr(namespace, self.dest, ['.*'] if all else target)

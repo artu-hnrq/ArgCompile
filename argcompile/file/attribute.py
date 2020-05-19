@@ -1,7 +1,43 @@
+from argparse import SUPPRESS, _StoreAction
 from ..attribute import *
 
+# ==============
+# Action classes
+# ==============
+
+class Path(_StoreAction):
+	def __init__(self,
+                 option_strings,
+                 dest,
+                 nargs = None,
+                 const = None,
+                 default = ['./'],
+                 choices = None,
+                 required = False,
+				 help = 'define target path(s)',
+				 metavar = None):
+		super(Path, self).__init__(
+			option_strings = option_strings,
+			dest = dest,
+			nargs = nargs,
+			const = const,
+			default = default,
+			type = self.type,
+			choices = choices,
+			required = required,
+			help = help,
+			metavar = metavar
+		)
+
+	def type(self, str):
+		if not str:
+			return './'
+		if not str.endswith('/'):
+			str += '/'
+		return str
+
 # ===========================
-# Attribute parsing classes
+# Attribute compilation classes
 # ===========================
 
 class Extension(Attribute):
@@ -9,11 +45,11 @@ class Extension(Attribute):
 				 *option_strings,
 				 dest = 'extension',
 				 nargs = '*',
-				 default = None,
+				 default = [],
 				 type = None,
 				 choices = None,
 				 help = 'define target extension(s)',
-				 metavar = 'extension',
+				 metavar = None,
 
 				 title = 'Extension',
 				 description = 'option(s) to define extension(s)'):
@@ -25,7 +61,7 @@ class Extension(Attribute):
 			type = type,
 			choices = choices,
 			help = help,
-			metavar = metavar,
+			metavar = metavar or dest,
 
 			title = title or dest,
 			description = description
@@ -35,8 +71,8 @@ class Extension(Attribute):
 			if self.required:
 				if len(self.choices) < self.min:
 					raise ValueError(
-						"Number of restricted choices need to be equal or greater than minimum extensions required. \n" \
-						f"Restricted choices: {self.choices}, Minimum extensions required: {self.min}"
+						f"Number of restricted choices {self.choices} need to be " \
+						f"equal or greater than minimum extensions required ({self.min})."
 					)
 				elif len(self.choices) == self.min:
 					self.default = self.choices
@@ -44,19 +80,18 @@ class Extension(Attribute):
 					return
 
 			elif len(self.choices) == 1:
-				self.add_options(*self.choices, action='store_const')
+				self.add_options(*self.choices, default=SUPPRESS)
 				return
 
 		self.set_defaults(**{f"{self.dest}": self.default})
 
 		self.arguments.add_argument(*self.option_strings,
-			action = 'append_over',
-			dest = self.dest,
+			action = 'append',
+			dest = 'extension',
 			nargs = {
 				'?': 1,
 				'*': '+'
 			}.get(self.nargs, self.nargs),
-			default = self.default,
 			choices = self.choices if self.restricted else None,
 			help = self.help,
 			metavar = self.metavar
@@ -65,15 +100,30 @@ class Extension(Attribute):
 		if self.choices:
 			self.add_options(*self.choices, default=SUPPRESS)
 
+	@property
+	def arguments(self):
+		self._arguments = getattr(self, '_arguments',
+			self.add_mutually_exclusive_group(required=self.required) \
+		 		if self.max == 1 else \
+			self.add_required_group() \
+				if self.required else \
+			self.add_argument_group()
+		)
+		return self._arguments
 
-	def add_options(self, *options, action='append_const_over', **kwargs):
+	def add_options(self, *options, action='append_const', **kwargs):
 		for option in options:
 			self.arguments.add_argument(f"--{option}",
 				action = action,
-				dest = self.dest,
-				const=f"{option}",
+				dest = 'options',
+				const= option,
 				**kwargs
 			)
+
+	def __call__(self, namespace, extension=None, options=None):
+		if options:
+			extension += options
+		setattr(namespace, self.dest, extension)
 
 class Output(Attribute):
 	def __init__(self,
@@ -108,7 +158,7 @@ class Output(Attribute):
 			metavar = self.metavar
 		)
 
-		group = self.add_dependent_group(self, (self.option_strings,))
+		group = self.add_dependent_group((self.option_strings,))
 		group = group.add_mutually_exclusive_group()
 		group.add_argument('-a', '--append',
 			action = 'store_const',
@@ -123,23 +173,6 @@ class Output(Attribute):
 			help = 'define output file open type'
 		)
 
-	def popattr(self, namespace):
-		attributes = dict([
-			(action.dest, getattr(namespace, action.dest, None))
-			for action in
-			self._actions
-		])
-		for attr, value in attributes.items():
-			if value:
-				delattr(namespace, attr)
-
-		return attributes
-
-	def __call__(self, namespace):
-		def process(*, output = None, mode = None):
-			mode = mode or 'w'
-			if output != SUPPRESS:
-				setattr(namespace, self.dest, open(output, mode))
-
-		process(**self.popattr(namespace))
-		return namespace
+	def __call__(self, namespace, output=None, mode='w'):
+		if output != SUPPRESS:
+			setattr(namespace, self.dest, open(output, mode))
