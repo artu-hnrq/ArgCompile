@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.1",
     author="Arthur Henrique Della Fraga",
     author_email="Arthur.Henrique.Della.Fraga@gmail.com",
-    description="An argparse extension to compile filled Namespace objects",
+    description="An argparse extension to manage process multiple input arguments in several goals.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/artu-hnrq/argcompile",

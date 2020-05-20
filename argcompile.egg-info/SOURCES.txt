@@ -1,8 +1,7 @@
 README.md
 setup.py
 argcompile/__init__.py
-argcompile/attribute.py
-argcompile/compiler.py
+argcompile/main.py
 argcompile/meta.py
 argcompile.egg-info/PKG-INFO
 argcompile.egg-info/SOURCES.txt

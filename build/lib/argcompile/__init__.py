@@ -1,4 +1,3 @@
 from argparse import *
-from .compiler import *
-from .attribute import *
+from .main import *
 from .file import *

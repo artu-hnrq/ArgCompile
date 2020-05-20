@@ -1,5 +1,5 @@
 from argparse import SUPPRESS, _StoreAction
-from ..attribute import *
+from ..main import Attribute
 
 # ==============
 # Action classes

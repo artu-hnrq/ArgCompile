@@ -1,13 +1,14 @@
-from argparse import ArgumentParser
-from .meta import *
+from argparse import ArgumentParser,
+from .meta import MetaAttributeCompiler
 import sys
+
 
 # ===========================
 # Attribute compilation classes
 # ===========================
 
-class AttributeCompiler(ArgumentParser, metaclass=MetaAttributeCompiler):
-	"""Object for prosecute parsed command line."""
+class ArgumentCompiler(ArgumentParser, metaclass=MetaAttributeCompiler):
+	"""ArgumentParser specialization for prosecute parsed command line."""
 
 	def __init__(self, **kwargs):
 		super(ArgumentCompiler, self).__init__(**kwargs)
@@ -16,7 +17,7 @@ class AttributeCompiler(ArgumentParser, metaclass=MetaAttributeCompiler):
 	def add_attribute(self, attr):
 		self._add_container_actions(attr)
 
-		for group in attr._testable_groups:
+		for group in attr._custom_groups:
 			self.register('usage_test', str(id(group)), group.__call__)
 
 		self.set_defaults(**{f"{attr.dest}": attr.get_default(attr.dest)})

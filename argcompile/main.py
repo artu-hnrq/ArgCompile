@@ -1,6 +1,6 @@
 import argparse
-from argparse import SUPPRESS, _AppendAction, _AppendConstAction
-from .meta import MetaAttribute
+from argparse import SUPPRESS, ArgumentParser, _AppendAction, _AppendConstAction
+from .meta import MetaArgumentCompiler, MetaAttribute
 import sys
 
 # ==============
@@ -15,6 +15,7 @@ class _AppendOverDefault(_AppendAction):
 		else:
 			items.extend(values)
 			setattr(namespace, self.dest, items)
+
 
 class _AppendConstOverDefault(_AppendConstAction):
 	def __call__(self, parser, namespace, values, option_string=None):
@@ -47,11 +48,11 @@ class _ActionsContainer(argparse._ActionsContainer):
 		self.register('action', 'append_const_over', _AppendConstOverDefault)
 		self.register('type', None, lambda str: str)
 
-		self._testable_groups = []
+		self._custom_groups = []
 
 	def _add_group(self, group_class, *args, **kwargs):
 		group = group_class(*args, **kwargs)
-		self._testable_groups.append(group)
+		self._custom_groups.append(group)
 		return group
 
 	def add_required_group(self, *args, **kwargs):
@@ -83,8 +84,9 @@ class TestableGroup(_ActionsContainer):
 			option_strings += action.option_strings
 		return option_strings
 
+
 class _RequiredGroup(TestableGroup):
-	"Requires at least one argument present"
+	"Requires at least one of its arguments to be present"
 
 	def __call__(self, parser, args, namespace):
 		for option in self._option_strings:
@@ -95,8 +97,9 @@ class _RequiredGroup(TestableGroup):
 			if self._option_strings:
 				parser.error(f"one of the arguments {' '.join(self._option_strings)} is required")
 
+
 class _DependentGroup(TestableGroup):
-	"Only allow argument if any of dependence is present"
+	"Only allows its arguments if some of dependence list is present"
 
 	def __init__(self, dependence, **kwargs):
 		super(_DependentGroup, self).__init__(**kwargs)
@@ -116,11 +119,11 @@ class _DependentGroup(TestableGroup):
 # ===========================
 
 class Attribute(_ActionsContainer, metaclass=MetaAttribute):
-	"""ActionsContainer specialization to manage multiple input arguments in one Namespace attribute.
+	"""ActionsContainer specialization to manage multiple input arguments for an unique Namespace attribute.
 
-	Attribute objects are used by an AttributeCompiler to represent information
+	Attribute objects are used by an ArgumentCompiler to represent information
     needed to be parsed through multiple arguments from the command line. The keyword arguments
-	define its decentent Actions instances."""
+	define its downward Actions instances."""
 
 	def __init__(self,
 				 *option_strings,
@@ -179,6 +182,7 @@ class Attribute(_ActionsContainer, metaclass=MetaAttribute):
 			'+': 1,
 		}.get(self.nargs, self.nargs)
 
+
 class Target(Attribute):
 	"Attribute designed to select compiler main object references"
 
@@ -223,3 +227,41 @@ class Target(Attribute):
 
 	def __call__(self, namespace, all=None, target=None):
 		setattr(namespace, self.dest, ['.*'] if all else target)
+
+
+class ArgumentCompiler(ArgumentParser, metaclass=MetaArgumentCompiler):
+	"""ArgumentParser specialization for prosecute parsed command line."""
+
+	def __init__(self, **kwargs):
+		super(ArgumentCompiler, self).__init__(**kwargs)
+		self.register('compilation', str(id(self)), self.__call__)
+
+	def add_attribute(self, attr):
+		self._add_container_actions(attr)
+
+		for group in attr._custom_groups:
+			self.register('usage_test', str(id(group)), group.__call__)
+
+		self.set_defaults(**{f"{attr.dest}": attr.get_default(attr.dest)})
+		self.register('attribute', str(id(attr)), attr.__call__)
+
+	def parse_args(self, args=None, namespace=None):
+		"""Extends argument parsing method to process namespace with
+		groups' usage tests, attributes' formation managegment and
+		self compilation"""
+
+		namespace  = super(ArgumentCompiler, self).parse_args(args, namespace)
+
+		for test in self._registries.get('usage_test', {}).values():
+			test(self, args or sys.argv[1:], namespace)
+
+		for attribute in self._registries.get('attribute', {}).values():
+			namespace = attribute(namespace)
+
+		for compilation in self._registries.get('compilation', {}).values():
+			namespace = compilation(namespace)
+
+		return namespace
+
+	def __call__(self, namespace):
+		return namespace

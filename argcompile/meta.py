@@ -1,7 +1,7 @@
 import inspect
 
 class MetaComposition(type):
-	"Overwrites a target method to call same-type superclasses' implementation orderly"
+	"Overwrites a target method to behave calling same-type superclasses' implementation orderly"
 
 	def __new__(meta, name, bases, attr, __func__='__call__'):
 		attr['__run__'] = attr[__func__]
@@ -26,7 +26,7 @@ class MetaComposition(type):
 		]
 
 class MetaArgumentCompiler(MetaComposition):
-	"Track __init__ keyword arguments to manage actions and attributes configuration"
+	"Tracks __init__ keyword arguments to manage Actions and Attributes configuration"
 
 	def __new__(meta, name, bases, attr):
 		__config__ = attr.pop('__config__', {})
@@ -67,7 +67,7 @@ class MetaArgumentCompiler(MetaComposition):
 
 		attr['__init__'] = init
 
-		return super(Meta, meta).__new__(meta, name, bases, attr)
+		return super(MetaArgumentCompiler, meta).__new__(meta, name, bases, attr)
 
 	def __run__(self, namespace):
 		for compiler in self.__class__.__compound__:
@@ -76,7 +76,7 @@ class MetaArgumentCompiler(MetaComposition):
 
 
 class MetaAttribute(type):
-	"Overwrites __call__ method to pop temporary attributes from namespace in order to process them"
+	"Overwrites __call__ method to pop temporary arguments from Namespace in order to process them"
 
 	def __new__(meta, name, bases, attr):
 		__run__ = attr.get('__call__', None)

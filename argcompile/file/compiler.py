@@ -1,5 +1,4 @@
-from argparse import *
-from ..compiler import ArgumentCompiler
+from ..main import *
 from .attribute import *
 
 import yaml
@@ -75,7 +74,7 @@ class FileComputer(FileSelector):
 	def __call__(self, namespace):
 		return namespace
 
-class YmlComputer(FileComputer):
+class YamlComputer(FileComputer):
 	__config__ = {
 		'extension': {
 			'nargs': 2,
@@ -84,7 +83,7 @@ class YmlComputer(FileComputer):
 	}
 
 	def __init__(self, **kwargs):
-		super(YmlComputer, self).__init__(**kwargs)
+		super(YamlComputer, self).__init__(**kwargs)
 
 	def __call__(self, namespace):
 		namespace.file = [
