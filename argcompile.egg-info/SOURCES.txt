@@ -1,3 +1,4 @@
+DESCRIPTION.md
 README.md
 setup.py
 argcompile/__init__.py

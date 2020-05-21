@@ -1,32 +1,36 @@
 # ArgCompile
 
-![Python](https://img.shields.io/badge/python-3.6-red)
-![GitHub](https://img.shields.io/github/license/artu-hnrq/argcompile)
+[![Python](https://img.shields.io/badge/python-3.6-red)][Python]
+[![License](https://img.shields.io/github/license/artu-hnrq/argcompile)][License]
+[![PyPI](https://img.shields.io/pypi/v/argcompile?color=blue)][PyPI]
 
-Command-line parsing library
+[`argcompile`][PyPI] is a Python package made to improve native [`argparse`][1] command-line parsing library by include some design classes that allows defining post-processing of supplied arguments. Check [package description](DESCRIPTION.md) for more information and [examples](DESCRIPTION.md#Example).
 
-This module proposes to extend [argparse][1] command-line parsing library objects in order to promote devices to easily process several parsed arguments into complex objects
 
-The package contains three public design classes, some useful implementations of them and other auxiliary classes. The most significant ones described bellow:
+## Getting started
+Make sure you have at least [Python 3.6 installed][2]:
+```
+$ python3 --version
+python 3.6.0
+```
 
-### ArgumentCompiler
-The main entry point for command-line parsing, extended to process new-design group usage test, attribute formation and `Namespace` compilation. Following its superclass, `ArgumentParser`, it's filled by `Actions` that defines as command line should be parsed. By extension, `add_attribute()` method process the inclusion of complex `ActionsContainer` named accordingly.
+Since, from this version, [pip][3] already comes together with Python, you'll be able to download package [latest release][PyPI] available in PyPI:
+```
+pip3 install argcompile
+```
 
-- **FileSelector**: A multiple file opener that filters selection based on path, filename(s) and extension(s)
-- **FileComputer**: A `FileSelector` specialization that also defines an output target
-- **YamlCompuler**: A `FileComputer` based class that restricts _yaml_ and _yml_ file extensions, already loading its content to a dictionary
+## Acknowledgements
 
-### Attribute
-An `ActionsContainer` specialization to manage parsing of multiple arguments into an unique `Namespace` attribute. Implementations of it can be made in order to define how a `Namespace` attribute should be constructed based on the several target arguments parsed.
+This tool was developed after reach an [`argparse` limitation][4] that is actually an old-dated [reported issue][5] and has already an [huge solution proposed][6] in which `argcompile` was based on.
 
-- **Target**: Defines a reference collection of the main parsed object
-- **Extension**: Designed to accumulate a list of extensions, allowing defining special arguments for desired options
-- **Output**: Defines a title and opening-mode of a writing file
+@hpaulj's proposal modifies the standard library making it more flexible to be extended, considering several usage situations and code improvements. `argcompile` otherwise implements a flavor of this mechanisms without much concern and with a simpler and limited approach.
 
-### CustomGroup
-A group-type class that allows post parsing usage tests to be executed. This design enables the implementation of custom rules in `Action` groups.
-
-- **RequiredGroup**: A simple group that checks the presence of its arguments to require at least one has been provided
-- **DependentGroup**: Restricts the use of its arguments based on presence of its dependence list
-
+  [Python]: https://www.python.org/downloads/
+  [License]: https://github.com/artu-hnrq/argcompile/blob/master/LICENSE
+  [PyPI]: https://pypi.org/project/argcompile
   [1]: https://docs.python.org/3/library/argparse.html
+  [2]: https://realpython.com/installing-python/
+  [3]: https://pip.pypa.io/en/stable/installing/
+  [4]: https://stackoverflow.com/q/61624056/2989289
+  [5]: https://bugs.python.org/issue11588
+  [6]: https://github.com/hpaulj/argparse_issues
