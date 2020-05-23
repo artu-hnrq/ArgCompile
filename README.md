@@ -1,6 +1,6 @@
 # ArgCompile
 
-[![Python](https://img.shields.io/badge/python-3.6-red)][Python]
+[![Python Version](https://img.shields.io/pypi/pyversions/argcompile?color=red)][Python]
 [![License](https://img.shields.io/github/license/artu-hnrq/argcompile)][License]
 [![PyPI](https://img.shields.io/pypi/v/argcompile?color=blue)][PyPI]
 
@@ -21,7 +21,7 @@ pip3 install argcompile
 
 ## Acknowledgements
 
-This tool was developed after reach an [`argparse` limitation][4] that is actually an old-dated [reported issue][5] and has already an [huge solution proposed][6] in which `argcompile` was based on.
+This tool was developed after reach an [`argparse` limitation][4] that is actually an old-dated [reported issue][5] and has already a huge refactor [solution proposed][6] in which `argcompile` was based on.
 
 @hpaulj's proposal modifies the standard library making it more flexible to be extended, considering several usage situations and code improvements. `argcompile` otherwise implements a flavor of this mechanisms without much concern and with a simpler and limited approach.
 

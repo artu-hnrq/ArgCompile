@@ -1,14 +1,14 @@
 Metadata-Version: 2.1
 Name: argcompile
-Version: 0.0.4
+Version: 0.0.5
 Summary: An argparse extension to easily manage post-processing of multiple parsed arguments
 Home-page: https://github.com/artu-hnrq/argcompile
 Author: Arthur Henrique Della Fraga
-Author-email: Arthur.Henrique.Della.Fraga@gmail.com
-License: UNKNOWN
+Author-email: "Arthur Henrique Della Fraga" <Arthur.Henrique.Della.Fraga@gmail.com>
+License: MIT
 Description: # ArgCompile
         
-        [![Python](https://img.shields.io/badge/python-3.6-red)][Python]
+        [![Python Version](https://img.shields.io/pypi/pyversions/argcompile?color=red)][Python]
         [![License](https://img.shields.io/github/license/artu-hnrq/argcompile)][License]
         [![PyPI](https://img.shields.io/pypi/v/argcompile?color=blue)][PyPI]
         
@@ -94,9 +94,14 @@ Description: # ArgCompile
           [PyPI]: https://pypi.org/project/argcompile
           [4]: https://docs.python.org/3/library/argparse.html
         
-Platform: UNKNOWN
-Classifier: Programming Language :: Python :: 3
-Classifier: License :: OSI Approved :: MIT License
+Platform: ANY
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
 Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.6
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Utilities
 Requires-Python: >=3.6
 Description-Content-Type: text/markdown

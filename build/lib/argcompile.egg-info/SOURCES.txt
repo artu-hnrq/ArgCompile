@@ -1,0 +1,12 @@
+DESCRIPTION.md
+LICENSE
+MANIFEST.in
+README.md
+setup.cfg
+setup.py
+src/argcompile/__init__.py
+src/argcompile/main.py
+src/argcompile/meta.py
+src/argcompile/file/__init__.py
+src/argcompile/file/attribute.py
+src/argcompile/file/compiler.py

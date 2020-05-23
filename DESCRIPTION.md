@@ -1,6 +1,6 @@
 # ArgCompile
 
-[![Python](https://img.shields.io/badge/python-3.6-red)][Python]
+[![Python Version](https://img.shields.io/pypi/pyversions/argcompile?color=red)][Python]
 [![License](https://img.shields.io/github/license/artu-hnrq/argcompile)][License]
 [![PyPI](https://img.shields.io/pypi/v/argcompile?color=blue)][PyPI]
 

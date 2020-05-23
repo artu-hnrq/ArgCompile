@@ -1,7 +1,15 @@
-compile:
-		rm dist/*
-		python3 setup.py sdist bdist_wheel
-		pip3 install ./dist/*.tar.gz
+c compile: build install
 
-publish:
-		python3 -m twine upload dist/*
+b build: clean
+	python3 setup.py dist
+
+i install:
+	pip3 install .
+
+p publish:
+	python3 -m twine upload dist/*
+
+
+clean:
+	python3 setup.py clean --all
+	rm -fr dist
