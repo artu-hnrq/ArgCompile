@@ -1,17 +1,17 @@
 # ArgCompile
 
-[![Python](https://img.shields.io/badge/python-3.6-red)][Python]
+[![Python Version](https://img.shields.io/pypi/pyversions/argcompile?color=red)][Python]
 [![License](https://img.shields.io/github/license/artu-hnrq/argcompile)][License]
 [![PyPI](https://img.shields.io/pypi/v/argcompile?color=blue)][PyPI]
 
 Command-line parsing library
 
-This module proposes to extend [`argparse`][4] command-line parsing library objects in order to promote devices to easily apply post-parsing processing into supplied arguments.
+This module proposes to extend [`argparse`][4] command-line parsing library objects in order to promote devices to easily apply post-parsing processing over supplied arguments.
 
 The package contains three public design classes, some useful implementations of them and other auxiliary classes. The most significant ones are described bellow:
 
 
-#### ArgumentCompiler
+### ArgumentCompiler
 The main entry point for command-line parsing, extended to process new-design group usage test, attribute formation and `Namespace` compilation. Following its superclass, `ArgumentParser`, it's filled by `Actions` that defines as command line should be parsed. By extension, `add_attribute()` method process the inclusion of complex `ActionsContainer` named accordingly.
 
 - **FileSelector**: A multiple file opener that filters selection based on path, filename(s) and extension(s)
@@ -19,7 +19,7 @@ The main entry point for command-line parsing, extended to process new-design gr
 - **YamlCompuler**: A `FileComputer` based class that restricts _yaml_ and _yml_ file extensions, already loading its content to a dictionary
 
 
-#### Attribute
+### Attribute
 An `ActionsContainer` specialization to manage parsing of multiple arguments into an unique `Namespace` attribute. Implementations of it can be made in order to define how a `Namespace` attribute should be constructed based on the several target arguments parsed.
 
 - **Target**: Defines a reference collection of the main parsed object
@@ -27,7 +27,7 @@ An `ActionsContainer` specialization to manage parsing of multiple arguments int
 - **Output**: Defines title and opening-mode of a writing file
 
 
-#### CustomGroup
+### CustomGroup
 A group-type class that allows post parsing usage tests to be executed. This design enables the implementation of custom rules in `Action` groups.
 
 - **RequiredGroup**: A simple group that checks the presence of its arguments to require at least one has been provided
@@ -74,14 +74,17 @@ optional arguments:
 When run with the appropriate arguments, it does the job:
 ```
 $ python3 ls.py . --all
+./.gitignore
 ./DESCRIPTION.md
 ./LICENSE
 ./makefile
+./MANIFEST.in
 ./README.md
+./setup.cfg
 ./setup.py
 ```
 
-  [Python]: https://www.python.org/downloads/
+  [Python]: https://www.python.org/
   [License]: https://github.com/artu-hnrq/argcompile/blob/master/LICENSE
   [PyPI]: https://pypi.org/project/argcompile
   [4]: https://docs.python.org/3/library/argparse.html
