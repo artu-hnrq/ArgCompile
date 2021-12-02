@@ -1,7 +1,8 @@
 import inspect
 
+
 class MetaComposition(type):
-	"Overwrites a target method to behave calling same-type superclasses' implementation orderly"
+	"""Overwrites a target method to behave calling same-type superclasses' implementation orderly"""
 
 	def __new__(meta, name, bases, attr, __func__='__call__'):
 		attr['__run__'] = attr[__func__]
@@ -25,8 +26,9 @@ class MetaComposition(type):
 			is type(cls)
 		]
 
+
 class MetaArgumentCompiler(MetaComposition):
-	"Tracks __init__ keyword arguments to manage Actions and Attributes configuration"
+	"""Tracks __init__ keyword arguments to manage Actions and Attributes configuration"""
 
 	def __new__(meta, name, bases, attr):
 		__config__ = attr.pop('__config__', {})
@@ -57,7 +59,7 @@ class MetaArgumentCompiler(MetaComposition):
 				if key in __action__:
 					self.add_argument(
 						*config[key].pop('*', []),
-						action = __action__[key],
+						action=__action__[key],
 						**config[key]
 					)
 				else:
@@ -76,17 +78,16 @@ class MetaArgumentCompiler(MetaComposition):
 
 
 class MetaAttribute(type):
-	"Overwrites __call__ method to pop temporary arguments from Namespace in order to process them"
+	"""Overwrites __call__ method to pop temporary arguments from Namespace in order to process them"""
 
 	def __new__(meta, name, bases, attr):
-		__run__ = attr.get('__call__', None)
-		if __run__:
+		if __run__ := attr.get('__call__', None):
 			args = inspect.getargspec(__run__).args[1:]
+
 			def __call__(self, namespace):
 				attr = dict()
 				for arg in args:
-					value = getattr(namespace, arg, None)
-					if value:
+					if value := getattr(namespace, arg, None):
 						attr[arg] = value
 						delattr(namespace, arg)
 
