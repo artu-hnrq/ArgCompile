@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Feat
 - Structure package development start point
+- Define attribute architecture 
 
 ### CI
 - Include release on tag workflow
