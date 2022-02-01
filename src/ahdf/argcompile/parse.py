@@ -1,5 +1,8 @@
 import argparse
+import inspect
+
 from argcompile.utils import identity, MustImplementError
+from registry import Registry
 
 
 class _AttributesContainer(argparse._ActionsContainer):
@@ -103,3 +106,41 @@ class Attribute(_AttributesContainer):
         :return a dict-like object to fulfill namespace
         """
         raise MustImplementError(self, '__call__')
+
+
+class ParserRegistry(Registry):
+    known_buckets = [argparse.Action, Attribute]
+
+    def __init__(self):
+        super(ParserRegistry, self).__init__()
+
+        self.register('type', None, identity)
+        for key, obj in [
+            (None, argparse._StoreAction),
+            ('store', argparse._StoreAction),
+            ('store_const', argparse._StoreConstAction),
+            ('store_true', argparse._StoreTrueAction),
+            ('store_false', argparse._StoreFalseAction),
+            ('append', argparse._AppendAction),
+            ('append_const', argparse._AppendConstAction),
+            ('count', argparse._CountAction),
+            ('help', argparse._HelpAction),
+            ('version', argparse._VersionAction),
+            ('parsers', argparse._SubParsersAction),
+            ('extend', argparse._ExtendAction),
+        ]:
+            self.register('action', key, obj)
+
+    def bucketize(self, obj):
+        if inspect.isclass(obj):
+            for bucket in self.known_buckets:
+                if issubclass(obj, bucket):
+                    return bucket.__name__.lower()
+
+        if callable(obj):
+            return 'type'
+
+        return 'undefined'
+
+
+PARSER_REGISTRY = ParserRegistry()
